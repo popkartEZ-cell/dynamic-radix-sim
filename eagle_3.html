@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EAGLE-3 推测解码模拟器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { margin: 0; background-color: #020617; }
+        
+        /* 核心动画定义 */
+        @keyframes sweep-scan {
+            0% { left: 240px; opacity: 0; }
+            10% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { left: 720px; opacity: 0; }
+        }
+        @keyframes shatter {
+            0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: translate(-50%, 50px) scale(0.5) rotate(15deg); opacity: 0; }
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        
+        /* 自定义滚动条 */
+        .custom-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        const { useState, useEffect } = React;
+
+        // 内联 SVG 图标组件替代 lucide-react 依赖
+        const Icon = ({ path, className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} dangerouslySetInnerHTML={{ __html: path }} />
+        );
+        const Play = (p) => <Icon {...p} path='<polygon points="5 3 19 12 5 21 5 3"></polygon>' />;
+        const FastForward = (p) => <Icon {...p} path='<polygon points="13 19 22 12 13 5 13 19"></polygon><polygon points="2 19 11 12 2 5 2 19"></polygon>' />;
+        const CheckCircle2 = (p) => <Icon {...p} path='<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>' />;
+        const XCircle = (p) => <Icon {...p} path='<circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>' />;
+        const Cpu = (p) => <Icon {...p} path='<rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line>' />;
+        const Zap = (p) => <Icon {...p} path='<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>' />;
+        const Activity = (p) => <Icon {...p} path='<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>' />;
+        const GitBranch = (p) => <Icon {...p} path='<line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path>' />;
+
+        function EagleSpeculativeSimulator() {
+            const [phase, setPhase] = useState(0); // 0: Init, 1: Drafting, 2: Verifying, 3: Accepted
+            const [stats, setStats] = useState({ speed: '158 tok/s', acceleration: '1.0x', draftCount: 0, acceptCount: 0 });
+            const [draftNodes, setDraftNodes] = useState([]);
+            const [isAutoPlay, setIsAutoPlay] = useState(false);
+
+            // 基准确认的上下文
+            const BASE_CONTEXT = ["SGLang", "is", "a", "fast", "engine"];
+            
+            // 重新定义精准的中心点坐标系，向右平移给左侧历史文本留出充足空间
+            const ROOT_X = 240;
+            const ROOT_Y = 250;
+
+            // 模拟 EAGLE-3 生成的自回归预测树 (Tree-based Draft)
+            const DRAFT_TREE = [
+                { id: 'd1', text: 'designed', x: 380, y: 160, parent: 'root', status: 'draft', prob: 0.85, level: 1 },
+                { id: 'd2', text: 'built', x: 380, y: 340, parent: 'root', status: 'draft', prob: 0.15, level: 1 },
+                
+                // designed 的分支
+                { id: 'd1_1', text: 'for', x: 520, y: 100, parent: 'd1', status: 'draft', prob: 0.9, level: 2 },
+                { id: 'd1_2', text: 'to', x: 520, y: 220, parent: 'd1', status: 'draft', prob: 0.1, level: 2 },
+                
+                // built 的分支
+                { id: 'd2_1', text: 'with', x: 520, y: 340, parent: 'd2', status: 'draft', prob: 0.6, level: 2 },
+                
+                // for 的分支 (Correct Path)
+                { id: 'd1_1_1', text: 'LLM', x: 660, y: 40, parent: 'd1_1', status: 'draft', prob: 0.95, level: 3 },
+                { id: 'd1_1_2', text: 'vision', x: 660, y: 160, parent: 'd1_1', status: 'draft', prob: 0.05, level: 3 },
+            ];
+
+            useEffect(() => {
+                let timer;
+                if (phase === 1) {
+                    // Phase 1: Draft model generates tree rapidly
+                    setStats({ speed: 'Drafting...', acceleration: '...', draftCount: 0, acceptCount: 0 });
+                    let currentDrafts = [];
+                    let i = 0;
+                    timer = setInterval(() => {
+                        if (i < DRAFT_TREE.length) {
+                            currentDrafts.push(DRAFT_TREE[i]);
+                            setDraftNodes([...currentDrafts]);
+                            setStats(s => ({ ...s, draftCount: i + 1 }));
+                            i++;
+                        } else {
+                            clearInterval(timer);
+                            setTimeout(() => setPhase(2), 800); // 缓冲
+                        }
+                    }, 350); // 减慢节点逐个生成的间隔
+                } else if (phase === 2) {
+                    // Phase 2: Target Model verifies the whole tree in 1 forward pass
+                    setStats({ speed: 'Verifying (1 Forward Pass)...', acceleration: '...', draftCount: 7, acceptCount: 0 });
+                    timer = setTimeout(() => {
+                        setPhase(3);
+                    }, 2500); // 扫描器扫过整棵树的时间
+                } else if (phase === 3) {
+                    // Phase 3: Acceptance & Pruning
+                    const correctPath = ['d1', 'd1_1', 'd1_1_1'];
+                    const evaluatedNodes = DRAFT_TREE.map(node => ({
+                        ...node,
+                        status: correctPath.includes(node.id) ? 'accepted' : 'rejected'
+                    }));
+                    setDraftNodes(evaluatedNodes);
+                    setStats({ speed: '373 tok/s', acceleration: '2.36x', draftCount: 7, acceptCount: 3 });
+                    
+                    if (isAutoPlay) {
+                        timer = setTimeout(() => {
+                            setPhase(0);
+                            setDraftNodes([]);
+                        }, 4000); // 每一轮演示结束后的停留时间
+                    }
+                }
+                return () => clearInterval(timer);
+            }, [phase, isAutoPlay]);
+
+            const triggerSpeculation = () => {
+                if (phase === 0 || phase === 3) {
+                    setDraftNodes([]);
+                    setPhase(1);
+                }
+            };
+
+            const renderEdges = () => {
+                return draftNodes.map((node) => {
+                    let srcX = ROOT_X;
+                    let srcY = ROOT_Y;
+                    
+                    if (node.parent !== 'root') {
+                        const parentNode = draftNodes.find(n => n.id === node.parent);
+                        if (!parentNode) return null;
+                        srcX = parentNode.x;
+                        srcY = parentNode.y;
+                    }
+
+                    const tgtX = node.x;
+                    const tgtY = node.y;
+
+                    const isAccepted = node.status === 'accepted';
+                    const isRejected = node.status === 'rejected';
+
+                    // Color edge based on node status
+                    let strokeColor = '#475569'; // slate-600
+                    let strokeWidth = 2;
+                    let strokeDash = 'none';
+
+                    if (isAccepted) {
+                        strokeColor = '#10b981'; // emerald-500
+                        strokeWidth = 3;
+                    } else if (isRejected) {
+                        strokeColor = '#ef4444'; // red-500
+                        strokeDash = '5,5'; // 正确的虚线
+                        strokeWidth = 1.5;
+                    }
+
+                    return (
+                        <path
+                            key={`edge-${node.id}`}
+                            d={`M ${srcX} ${srcY} C ${srcX + (tgtX - srcX) / 2} ${srcY}, ${srcX + (tgtX - srcX) / 2} ${tgtY}, ${tgtX} ${tgtY}`}
+                            fill="none"
+                            stroke={strokeColor}
+                            strokeWidth={strokeWidth}
+                            strokeDasharray={strokeDash}
+                            className={`transition-all duration-1000 ease-in-out ${isRejected ? 'animate-[fadeOut_1.5s_forwards]' : ''}`}
+                        />
+                    );
+                });
+            };
+
+            return (
+                <div className="flex flex-col min-h-screen bg-[#020617] text-slate-200 font-sans p-6 md:p-8">
+                    {/* Header */}
+                    <div className="mb-6 flex justify-between items-end border-b border-slate-800 pb-4">
+                        <div>
+                            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400 flex items-center gap-2">
+                                <GitBranch className="w-6 h-6 text-violet-400" />
+                                EAGLE-3 推测解码模拟器
+                            </h1>
+                            <p className="text-sm text-slate-400 mt-1">
+                                演示 SGLang 如何通过“小模型探路，大模型批阅”打破自回归推理瓶颈
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[70vh]">
+                        
+                        {/* Left Panel: Controls & Dashboard */}
+                        <div className="lg:col-span-4 flex flex-col gap-4 bg-slate-900/50 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                            
+                            <h2 className="text-sm font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2 mb-2">
+                                <Activity className="w-4 h-4 text-violet-400" /> 
+                                遥测监控台
+                            </h2>
+
+                            {/* Metrics Dashboard */}
+                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col items-center justify-center">
+                                    <span className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Target 吞吐量</span>
+                                    <span className={`text-lg font-mono font-bold ${phase === 3 ? 'text-emerald-400' : 'text-slate-300'}`}>
+                                        {stats.speed}
+                                    </span>
+                                </div>
+                                <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col items-center justify-center relative overflow-hidden">
+                                    {phase === 3 && <div className="absolute inset-0 bg-emerald-500/10 animate-pulse"></div>}
+                                    <span className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">相对加速比</span>
+                                    <span className={`text-lg font-mono font-bold ${phase === 3 ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'text-slate-300'}`}>
+                                        {stats.acceleration}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2 p-3 bg-slate-950 border border-slate-800 rounded-xl mb-4">
+                               <div className="flex justify-between text-xs font-mono">
+                                   <span className="text-slate-400">Draft 探路 Token:</span>
+                                   <span className="text-violet-400 font-bold">{stats.draftCount}</span>
+                               </div>
+                               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                   <div className="bg-violet-500 h-full transition-all duration-300" style={{ width: `${(stats.draftCount / 7) * 100}%` }}></div>
+                               </div>
+                               
+                               <div className="flex justify-between text-xs font-mono mt-2">
+                                   <span className="text-slate-400">大模型接受 (Accepted):</span>
+                                   <span className="text-emerald-400 font-bold">{stats.acceptCount}</span>
+                               </div>
+                               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                   <div className="bg-emerald-500 h-full transition-all duration-300" style={{ width: `${(stats.acceptCount / 3) * 100}%` }}></div>
+                               </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex flex-col gap-3 mt-auto">
+                                <button 
+                                    onClick={triggerSpeculation}
+                                    disabled={phase === 1 || phase === 2}
+                                    className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {phase === 0 || phase === 3 ? <><FastForward className="w-5 h-5" /> 发起 EAGLE-3 树状推测</> : '推测解码执行中...'}
+                                </button>
+                                <button 
+                                    onClick={() => setIsAutoPlay(!isAutoPlay)}
+                                    className={`w-full font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all border ${isAutoPlay ? 'bg-amber-600/20 text-amber-400 border-amber-600/50' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                                >
+                                    <Play className="w-4 h-4" /> {isAutoPlay ? '停止自动演示' : '开启自动演示'}
+                                </button>
+                            </div>
+                            
+                            {/* Phase Explanations */}
+                            <div className="mt-4 p-3 bg-slate-800/50 rounded-xl text-xs leading-relaxed text-slate-400 min-h-[80px]">
+                                {phase === 0 && "系统就绪。大模型生成极慢，准备召唤 Draft 小模型探路。"}
+                                {phase === 1 && <span className="text-violet-300 font-semibold">【Draft 阶段】小模型极速奔跑，以当前词为根节点，向外生成一棵包含多种可能的“预测树”。</span>}
+                                {phase === 2 && <span className="text-amber-300 font-semibold">【Verify 阶段】大模型发力！紫色扫描线扫过，将整棵树打包放入 GPU，通过 1 次 Forward Pass 并行校验所有分支。</span>}
+                                {phase === 3 && <span className="text-emerald-300 font-semibold">【Accept 阶段】大模型判定上方路径正确！拒绝其他分支（红色虚线碎裂掉落）。原本 1 次计算只能出 1 个词，现在 1 次出了 3 个词！</span>}
+                            </div>
+
+                        </div>
+
+                        {}
+                        <div className="lg:col-span-8 bg-slate-950 border border-slate-800 rounded-2xl relative overflow-hidden flex flex-col shadow-2xl h-[500px]">
+                            
+                            {/* Architect Labels (Fixed Overlay) */}
+                            <div className="absolute bottom-4 left-6 flex items-center gap-2 text-xs text-slate-500 font-mono bg-slate-900/80 px-3 py-1.5 rounded-md border border-slate-800 z-40 shadow-md">
+                               <Cpu className="w-4 h-4 text-slate-400" /> Target Model (70B) Context
+                            </div>
+                            {phase > 0 && (
+                               <div className="absolute bottom-4 right-6 flex items-center gap-2 text-xs text-violet-400 font-mono bg-violet-950/30 px-3 py-1.5 rounded-md border border-violet-900/50 animate-[popIn_0.3s_ease-out] z-40 shadow-md">
+                                   <Zap className="w-4 h-4" /> EAGLE-3 Draft Model (8B) Guess Tree
+                               </div>
+                            )}
+
+                            {/* Scrollable Canvas for the Tree */}
+                            <div className="flex-1 w-full h-full relative overflow-auto custom-scroll">
+                                <div className="relative min-w-[800px] min-h-[480px]">
+
+                                    {/* Timeline/Track background lines */}
+                                    <div className="absolute top-[250px] left-0 w-full h-[1px] bg-slate-800/50 border-dashed border-b border-slate-800"></div>
+
+                                    {/* The Big Scanner (Target Model Validation Pass) */}
+                                    {phase === 2 && (
+                                        <div 
+                                            className="absolute top-10 bottom-10 w-32 -ml-16 bg-gradient-to-r from-transparent via-violet-500/40 to-transparent z-20 pointer-events-none border-r-2 border-violet-400 blur-[1px] shadow-[0_0_20px_#8b5cf6] rounded-full"
+                                            style={{ animation: 'sweep-scan 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards' }}
+                                        ></div>
+                                    )}
+
+                                    {/* Base Context (Confirmed Tokens) */}
+                                    <div className="absolute flex flex-wrap justify-end gap-1.5 items-center z-30" style={{ width: ROOT_X - 25, right: `calc(100% - ${ROOT_X}px + 15px)`, top: ROOT_Y, transform: 'translateY(-50%)' }}>
+                                        {BASE_CONTEXT.map((word, idx) => (
+                                            <div key={idx} className="bg-slate-800 border border-slate-600 text-slate-200 px-2 py-1 rounded-md text-xs font-mono shadow-lg whitespace-nowrap">
+                                                {word}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    
+                                    {/* The Anchor Point for Draft Tree */}
+                                    <div className="absolute z-30 w-4 h-4 rounded-full bg-violet-500 shadow-[0_0_10px_#8b5cf6]" style={{ left: ROOT_X, top: ROOT_Y, transform: 'translate(-50%, -50%)' }}>
+                                       {/* Pulsing effect during drafting */}
+                                       {phase === 1 && <div className="absolute inset-0 rounded-full bg-violet-400 animate-ping opacity-75"></div>}
+                                    </div>
+
+                                    {/* Draft Tree SVG Edges */}
+                                    <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
+                                        {renderEdges()}
+                                    </svg>
+
+                                    {/* Draft Tree HTML Nodes */}
+                                    {draftNodes.map((node) => {
+                                        const isAccepted = node.status === 'accepted';
+                                        const isRejected = node.status === 'rejected';
+                                        
+                                        return (
+                                            <div
+                                                key={node.id}
+                                                className={`absolute z-30 transition-all duration-1000 flex flex-col items-center
+                                                    ${node.status === 'draft' ? 'animate-[popIn_0.4s_ease-out]' : ''}
+                                                    ${isRejected ? 'pointer-events-none' : ''}
+                                                `}
+                                                style={{ 
+                                                    left: node.x, top: node.y, transform: 'translate(-50%, -50%)',
+                                                    animation: isRejected ? 'shatter 1.5s ease-in-out forwards' : ''
+                                                }}
+                                            >
+                                                {/* Node Box */}
+                                                <div className={`px-3 py-1.5 rounded-lg border-2 text-sm font-mono shadow-lg flex items-center gap-1.5 transition-colors duration-1000 whitespace-nowrap
+                                                    ${node.status === 'draft' ? 'bg-slate-900 border-violet-500/50 text-violet-200 shadow-[0_0_15px_rgba(139,92,246,0.2)]' : ''}
+                                                    ${isAccepted ? 'bg-emerald-950 border-emerald-500 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.4)] scale-110' : ''}
+                                                    ${isRejected ? 'bg-red-950 border-red-800 text-red-400 opacity-50 grayscale' : ''}
+                                                `}>
+                                                    {isAccepted && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />}
+                                                    {isRejected && <XCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
+                                                    {node.text}
+                                                </div>
+                                                
+                                                {/* Confidence Label */}
+                                                {!isRejected && (
+                                                    <div className={`text-[9px] mt-1 font-mono transition-colors duration-500
+                                                        ${isAccepted ? 'text-emerald-500' : 'text-slate-500'}
+                                                    `}>
+                                                        {(node.prob * 100).toFixed(0)}%
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<EagleSpeculativeSimulator />);
+    </script>
+</body>
+</html>
