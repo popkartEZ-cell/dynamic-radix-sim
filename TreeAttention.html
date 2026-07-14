@@ -53,15 +53,15 @@
             const [isAutoPlay, setIsAutoPlay] = useState(false);
             const [activeRow, setActiveRow] = useState(-1);
 
-            const ROOT_NODE = { id: 'root', text: 'SGLang is', x: 100, y: 200 };
+            const ROOT_NODE = { id: 'root', text: 'SGLang is', x: 120, y: 225 };
 
             const DRAFT_NODES = [
-                { id: 'n1', text: 'designed', parent: 'root', x: 280, y: 100 },
-                { id: 'n2', text: 'built',    parent: 'root', x: 280, y: 200 },
-                { id: 'n3', text: 'a',        parent: 'root', x: 280, y: 300 },
-                { id: 'n4', text: 'for',      parent: 'n1',   x: 440, y: 100 },
-                { id: 'n5', text: 'LLMs',     parent: 'n4',   x: 600, y: 100 },
-                { id: 'n6', text: 'fast',     parent: 'n3',   x: 440, y: 300 },
+                { id: 'n1', text: 'designed', parent: 'root', x: 340, y: 100 },
+                { id: 'n2', text: 'built',    parent: 'root', x: 340, y: 225 },
+                { id: 'n3', text: 'a',        parent: 'root', x: 340, y: 350 },
+                { id: 'n4', text: 'for',      parent: 'n1',   x: 560, y: 100 },
+                { id: 'n5', text: 'LLMs',     parent: 'n4',   x: 780, y: 100 },
+                { id: 'n6', text: 'fast',     parent: 'n3',   x: 560, y: 350 },
             ];
 
             const TREE_MASK = [
@@ -158,8 +158,8 @@
                             <h2 className="text-sm font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2 mb-4 border-b border-slate-800 pb-2 shrink-0">
                                 <GitBranch className="w-4 h-4 text-violet-400" /> 1. Draft 树形结构
                             </h2>
-                            <div className="flex-1 relative overflow-auto bg-slate-950/50 rounded-xl border border-slate-800/50 custom-scrollbar">
-                               <div className="relative w-full h-full min-w-[700px] min-h-[400px]">
+                            <div className="flex-1 relative bg-slate-950/50 rounded-xl border border-slate-800/50 overflow-hidden flex items-center justify-center">
+                               <div className="relative w-[850px] h-[450px] shrink-0 scale-90 xl:scale-100 origin-center">
                                  <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">{phase >= 1 && renderTreeEdges()}</svg>
                                  
                                  <div className="absolute z-30 transition-all duration-700" style={{ left: ROOT_NODE.x, top: ROOT_NODE.y, transform: 'translate(-50%, -50%)' }}>
@@ -216,44 +216,52 @@
                                 <div className={`flex-1 p-2 text-center rounded border transition-all ${phase >= 5 ? 'bg-emerald-900/40 border-emerald-500 text-emerald-300' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>4. Verify & Accept</div>
                             </div>
 
-                            <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] 2xl:grid-cols-[1.2fr_0.8fr] gap-6 lg:gap-8 items-start min-h-[320px] lg:mt-4">
-                                <div className="flex flex-col items-center">
-                                    <h3 className="text-xs sm:text-sm lg:text-base font-bold text-slate-400 mb-6 flex items-center gap-2"><Hash className="w-4 h-4 lg:w-5 lg:h-5"/> 6x6 Tree Mask 矩阵</h3>
+                            <div className="flex-1 flex flex-col xl:flex-row gap-6 items-stretch min-h-[320px] lg:mt-2">
+                                <div className="flex-[1.2] flex flex-col items-center justify-center bg-slate-900/30 rounded-2xl p-4 border border-slate-800/50 relative">
+                                    <h3 className="text-xs sm:text-sm lg:text-base font-bold text-slate-400 flex items-center gap-2 absolute top-5"><Hash className="w-4 h-4 lg:w-5 lg:h-5"/> 6x6 Tree Mask 矩阵</h3>
                                     {phase >= 2 ? (
-                                        <div className="relative animate-[popIn_0.4s_ease-out] flex flex-col items-center w-full">
-                                            <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 2xl:gap-4 mb-1.5 sm:mb-2 lg:mb-3 2xl:mb-4">
-                                                <div className="w-10 sm:w-14 lg:w-16 2xl:w-20 shrink-0"></div>
-                                                <div className="flex gap-1.5 sm:gap-2 lg:gap-3 2xl:gap-4">
-                                                    {DRAFT_NODES.map(n => <div key={`col-${n.id}`} className="w-10 sm:w-12 lg:w-14 2xl:w-16 text-center text-[10px] sm:text-xs lg:text-sm 2xl:text-base text-slate-500 font-mono">K({n.id})</div>)}
-                                                </div>
-                                            </div>
-                                            {TREE_MASK.map((row, rIdx) => (
-                                                <div key={`row-${rIdx}`} className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 2xl:gap-4 mb-1.5 sm:mb-2 lg:mb-3 2xl:mb-4 relative">
-                                                    <div className="w-10 sm:w-14 lg:w-16 2xl:w-20 text-right pr-1 sm:pr-2 lg:pr-3 2xl:pr-4 text-[10px] sm:text-xs lg:text-sm 2xl:text-base text-violet-400 font-mono font-bold shrink-0">Q({DRAFT_NODES[rIdx].id})</div>
-                                                    <div className="flex gap-1.5 sm:gap-2 lg:gap-3 2xl:gap-4 relative">
-                                                        {activeRow === rIdx && <div className="absolute inset-0 bg-cyan-500/20 shadow-[0_0_20px_#06b6d4] rounded-xl animate-pulse pointer-events-none z-0 -mx-1.5 -my-1.5 sm:-mx-2 sm:-my-2 lg:-mx-3 lg:-my-3"></div>}
-                                                        {row.map((val, cIdx) => (
-                                                            <div key={`cell-${rIdx}-${cIdx}`} 
-                                                                 className={`relative z-10 w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 2xl:w-16 2xl:h-16 rounded-xl border flex items-center justify-center font-mono text-xs sm:text-sm lg:text-base 2xl:text-lg transition-all duration-500
-                                                                   ${val === 1 ? 'bg-slate-800/90 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.25)] scale-105' : 'bg-slate-950 border-red-900/30 text-red-900/40'}`}
-                                                                 style={activeRow === rIdx ? { animation: `glowCell 0.6s ease-in-out ${cIdx * 0.08}s` } : {}}
-                                                            >
-                                                                {val === 1 ? '1' : '-∞'}
+                                        <div className="animate-[popIn_0.4s_ease-out] w-full flex justify-center mt-10 mb-6">
+                                            <div className="inline-grid grid-cols-[auto_repeat(6,minmax(2.5rem,4rem))] sm:grid-cols-[auto_repeat(6,minmax(3rem,4.5rem))] gap-1.5 sm:gap-2 lg:gap-3 items-center">
+                                                <div></div>
+                                                {DRAFT_NODES.map(n => <div key={`col-${n.id}`} className="text-center text-[10px] sm:text-xs lg:text-sm text-slate-500 font-mono">K({n.id})</div>)}
+                                                
+                                                {TREE_MASK.map((row, rIdx) => {
+                                                    const isActive = activeRow === rIdx;
+                                                    return (
+                                                        <React.Fragment key={`row-${rIdx}`}>
+                                                            <div className={`text-right pr-2 sm:pr-3 text-[10px] sm:text-xs lg:text-sm font-mono font-bold transition-colors ${isActive ? 'text-cyan-400' : 'text-violet-400'}`}>
+                                                                Q({DRAFT_NODES[rIdx].id})
                                                             </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            <p className="text-[10px] sm:text-xs lg:text-sm text-slate-500 mt-6 lg:mt-8 text-center">严格屏蔽平行分支的注意力 (如 n2 看不到 n1)</p>
+                                                            {row.map((val, cIdx) => (
+                                                                <div key={`cell-${rIdx}-${cIdx}`} 
+                                                                     className={`aspect-square rounded-xl border flex items-center justify-center font-mono text-xs sm:text-sm lg:text-base transition-all duration-500
+                                                                         ${val === 1 
+                                                                             ? isActive 
+                                                                                 ? 'bg-emerald-900/80 border-emerald-400 text-emerald-300 shadow-[0_0_15px_#34d399] scale-110 z-10'
+                                                                                 : 'bg-slate-800/90 border-emerald-600/50 text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.1)]'
+                                                                             : isActive
+                                                                                 ? 'bg-slate-900 border-red-900/50 text-red-900/60 shadow-[inset_0_0_10px_#0891b2] border-cyan-900/50'
+                                                                                 : 'bg-slate-950 border-slate-800/50 text-slate-800/50'}
+                                                                     `}
+                                                                     style={isActive && val === 1 ? { animation: `glowCell 0.6s ease-in-out ${cIdx * 0.08}s` } : {}}
+                                                                >
+                                                                    {val === 1 ? '1' : '-∞'}
+                                                                </div>
+                                                            ))}
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     ) : (
-                                        <div className="w-full h-64 border-2 border-dashed border-slate-800 rounded-xl flex items-center justify-center text-slate-600 text-sm">等待装载...</div>
+                                        <div className="w-full h-48 border-2 border-dashed border-slate-800 rounded-xl flex items-center justify-center text-slate-600 text-sm mt-10 mb-6">等待装载...</div>
                                     )}
+                                    {phase >= 2 && <p className="text-[10px] sm:text-xs lg:text-sm text-slate-500 absolute bottom-5 text-center">严格屏蔽平行分支的注意力 (如 n2 看不到 n1)</p>}
                                 </div>
 
-                                <div className="flex flex-col h-full">
-                                    <h3 className="text-xs sm:text-sm lg:text-base font-bold text-slate-400 mb-5 flex items-center gap-2"><Zap className="w-4 h-4 lg:w-5 lg:h-5"/> 并行 Logits 输出 & 裁决</h3>
-                                    <div className="flex flex-col gap-2 flex-1 justify-center">
+                                <div className="flex-[0.8] flex flex-col justify-center gap-2 lg:gap-4 mt-6 xl:mt-0">
+                                    <h3 className="text-xs sm:text-sm lg:text-base font-bold text-slate-400 mb-1 lg:mb-2 flex items-center gap-2"><Zap className="w-4 h-4 lg:w-5 lg:h-5"/> 并行 Logits 输出 & 裁决</h3>
+                                    <div className="flex flex-col gap-2.5">
                                         {phase >= 4 ? TARGET_PREDICTIONS.map((pred, idx) => {
                                             const node = DRAFT_NODES[idx];
                                             const acceptedNodes = ['n1', 'n4', 'n5'];
