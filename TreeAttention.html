@@ -218,20 +218,23 @@
 
                             <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-8 items-start min-h-[320px]">
                                 <div className="flex flex-col items-center">
-                                    <h3 className="text-xs font-bold text-slate-400 mb-3 flex items-center gap-1.5"><Hash className="w-3.5 h-3.5"/> 6x6 Tree Mask 矩阵</h3>
+                                    <h3 className="text-xs sm:text-sm font-bold text-slate-400 mb-4 flex items-center gap-1.5"><Hash className="w-4 h-4"/> 6x6 Tree Mask 矩阵</h3>
                                     {phase >= 2 ? (
                                         <div className="relative animate-[popIn_0.4s_ease-out]">
-                                            <div className="flex ml-11 mb-1.5 gap-1.5">
-                                                {DRAFT_NODES.map(n => <div key={`col-${n.id}`} className="w-8 text-center text-[10px] text-slate-500 font-mono">K({n.id})</div>)}
+                                            <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                                                <div className="w-12 sm:w-14 shrink-0"></div>
+                                                <div className="flex gap-1.5 sm:gap-2">
+                                                    {DRAFT_NODES.map(n => <div key={`col-${n.id}`} className="w-10 sm:w-12 text-center text-[10px] sm:text-xs text-slate-500 font-mono">K({n.id})</div>)}
+                                                </div>
                                             </div>
                                             {TREE_MASK.map((row, rIdx) => (
-                                                <div key={`row-${rIdx}`} className="flex items-center gap-1.5 mb-1.5 relative">
-                                                    <div className="w-9 text-right text-[10px] text-violet-400 font-mono font-bold">Q({DRAFT_NODES[rIdx].id})</div>
-                                                    <div className="flex gap-1.5 relative">
-                                                        {activeRow === rIdx && <div className="absolute inset-0 bg-cyan-500/20 shadow-[0_0_15px_#06b6d4] rounded animate-pulse pointer-events-none z-0 -mx-1 -my-1"></div>}
+                                                <div key={`row-${rIdx}`} className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2 relative">
+                                                    <div className="w-12 sm:w-14 text-right pr-1 sm:pr-2 text-[10px] sm:text-xs text-violet-400 font-mono font-bold shrink-0">Q({DRAFT_NODES[rIdx].id})</div>
+                                                    <div className="flex gap-1.5 sm:gap-2 relative">
+                                                        {activeRow === rIdx && <div className="absolute inset-0 bg-cyan-500/20 shadow-[0_0_15px_#06b6d4] rounded-lg animate-pulse pointer-events-none z-0 -mx-1.5 -my-1.5"></div>}
                                                         {row.map((val, cIdx) => (
                                                             <div key={`cell-${rIdx}-${cIdx}`} 
-                                                                 className={`relative z-10 w-8 h-8 rounded border flex items-center justify-center font-mono text-[11px] transition-all duration-500
+                                                                 className={`relative z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-lg border flex items-center justify-center font-mono text-xs sm:text-sm transition-all duration-500
                                                                    ${val === 1 ? 'bg-slate-800/80 border-emerald-500/50 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.15)]' : 'bg-slate-950 border-red-900/30 text-red-900/50'}`}
                                                                  style={activeRow === rIdx ? { animation: `glowCell 0.6s ease-in-out ${cIdx * 0.08}s` } : {}}
                                                             >
@@ -241,10 +244,10 @@
                                                     </div>
                                                 </div>
                                             ))}
-                                            <p className="text-[9px] text-slate-500 mt-4 text-center">严格屏蔽平行分支的注意力 (如 n2 看不到 n1)</p>
+                                            <p className="text-[10px] text-slate-500 mt-5 text-center">严格屏蔽平行分支的注意力 (如 n2 看不到 n1)</p>
                                         </div>
                                     ) : (
-                                        <div className="w-full h-56 border-2 border-dashed border-slate-800 rounded-xl flex items-center justify-center text-slate-600 text-xs">等待装载...</div>
+                                        <div className="w-full h-64 border-2 border-dashed border-slate-800 rounded-xl flex items-center justify-center text-slate-600 text-sm">等待装载...</div>
                                     )}
                                 </div>
 
